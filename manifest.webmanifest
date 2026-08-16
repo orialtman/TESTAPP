@@ -1,0 +1,12 @@
+{
+  "name": "Where's My Car?",
+  "short_name": "My Car",
+  "description": "Save your car's parking spot and find it later.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0f1420",
+  "theme_color": "#0f1420",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

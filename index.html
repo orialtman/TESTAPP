@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1420" />
+  <title>Where's My Car?</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ============ AUTH SCREEN ============ -->
+  <section id="screen-auth" class="screen">
+    <div class="auth-wrap">
+      <div class="logo">
+        <img src="icon.svg" alt="" class="logo-icon" />
+        <h1>Where's My Car?</h1>
+        <p class="tagline">Never forget where you parked.</p>
+      </div>
+
+      <div class="auth-tabs">
+        <button id="tab-signup" class="auth-tab active" type="button">Sign Up</button>
+        <button id="tab-login" class="auth-tab" type="button">Log In</button>
+      </div>
+
+      <form id="form-signup" class="auth-form" novalidate>
+        <label>Username <span class="req">*</span>
+          <input name="username" type="text" autocomplete="username" placeholder="e.g. ori" required />
+        </label>
+        <label>Email <span class="opt">(optional)</span>
+          <input name="email" type="email" autocomplete="email" placeholder="you@example.com" />
+        </label>
+        <label>Phone <span class="opt">(optional)</span>
+          <input name="phone" type="tel" autocomplete="tel" placeholder="+972 50 000 0000" />
+        </label>
+        <label>Password <span class="req">*</span>
+          <input name="password" type="password" autocomplete="new-password" placeholder="min 4 characters" required minlength="4" />
+        </label>
+        <p class="hint">No verification needed — your account works instantly. Everything is stored only on this device.</p>
+        <button type="submit" class="btn btn-primary">Create account</button>
+        <p id="signup-error" class="form-error" role="alert"></p>
+      </form>
+
+      <form id="form-login" class="auth-form hidden" novalidate>
+        <label>Username / Email / Phone
+          <input name="identifier" type="text" autocomplete="username" placeholder="ori · you@example.com · +972…" required />
+        </label>
+        <label>Password
+          <input name="password" type="password" autocomplete="current-password" required />
+        </label>
+        <button type="submit" class="btn btn-primary">Log in</button>
+        <p id="login-error" class="form-error" role="alert"></p>
+      </form>
+    </div>
+  </section>
+
+  <!-- ============ HOME SCREEN ============ -->
+  <section id="screen-home" class="screen hidden">
+    <header class="topbar">
+      <span id="home-greeting" class="greeting">Hi</span>
+      <button id="btn-logout" class="btn-ghost" type="button">Log out</button>
+    </header>
+
+    <div class="home-main">
+      <button id="btn-park" class="park-circle" type="button" aria-label="Park here — save my car's current location">
+        <span class="park-icon">🅿️</span>
+        <span class="park-word">PARK</span>
+        <span class="park-sub">save my spot</span>
+      </button>
+      <p id="park-status" class="park-status" role="status"></p>
+
+      <button id="btn-show-car" class="btn btn-show" type="button">
+        🚗 SHOW ME WHERE MY CAR IS
+      </button>
+    </div>
+
+    <div class="cards">
+      <article class="card card-current">
+        <h2>Current park</h2>
+        <div id="current-park-body" class="card-body">
+          <p class="empty">No car parked yet — press PARK when you leave your car.</p>
+        </div>
+      </article>
+
+      <article class="card card-last">
+        <h2>Last park</h2>
+        <div id="last-park-body" class="card-body">
+          <p class="empty">Your previous spot will show up here.</p>
+        </div>
+      </article>
+    </div>
+
+    <button id="btn-history" class="btn btn-secondary" type="button">📜 Parking history</button>
+  </section>
+
+  <!-- ============ MAP SCREEN ============ -->
+  <section id="screen-map" class="screen hidden">
+    <header class="topbar">
+      <button class="btn-ghost btn-back" data-back type="button">← Back</button>
+      <span class="screen-title">Your car</span>
+      <span></span>
+    </header>
+    <div id="map" aria-label="Map showing your car's location"></div>
+    <div class="map-footer">
+      <p id="map-info" class="map-info">Locating…</p>
+      <a id="btn-navigate" class="btn btn-primary" target="_blank" rel="noopener">🧭 Navigate with Google Maps</a>
+    </div>
+  </section>
+
+  <!-- ============ HISTORY SCREEN ============ -->
+  <section id="screen-history" class="screen hidden">
+    <header class="topbar">
+      <button class="btn-ghost btn-back" data-back type="button">← Back</button>
+      <span class="screen-title">Parking history</span>
+      <button id="btn-clear-history" class="btn-ghost danger" type="button">Clear</button>
+    </header>
+    <ul id="history-list" class="history-list"></ul>
+    <p id="history-empty" class="empty history-empty">No past parks yet. Every time you press PARK, your previous spot lands here.</p>
+  </section>
+
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
