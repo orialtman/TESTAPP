@@ -59,6 +59,26 @@ For local development: `python3 -m http.server` and open
 - **FR-7 Isolation.** Each username's parks are stored separately; logging
   in as another user on the same device never shows someone else's spots.
 
+## Cloud sync (optional, free)
+
+Out of the box the app is device-only. To make accounts work across devices
+(sign up on your phone, see the same history on your laptop, live sync):
+
+1. Create a free Firebase project at console.firebase.google.com
+   (Spark plan, no credit card).
+2. **Build → Authentication → Get started → Email/Password → Enable.**
+   (No email verification is ever sent — signup stays instant.)
+3. **Build → Firestore Database → Create database** (production mode).
+4. In the **Rules** tab paste the contents of `firestore.rules` → Publish.
+5. **Project settings → Your apps → Web app (</>)** → register → copy the
+   `firebaseConfig` object into `config.js` in this repo → push.
+
+That's it — the app detects the config and switches to cloud mode:
+same UI, accounts live in Firebase Auth (username-only accounts get a
+synthetic email under the hood), parks sync live via Firestore, and
+localStorage becomes an offline cache. Parks saved on a device before the
+switch are adopted into the cloud account on signup.
+
 ## Honest limitations
 
 - Accounts are **per device** (that's the price of "no server, no

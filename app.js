@@ -1,11 +1,20 @@
-/* Where's My Car? — all data lives in this browser's localStorage.
- * Accounts are unverified by design: signing up creates the account instantly. */
+/* Where's My Car?
+ *
+ * Two storage modes, picked automatically at load:
+ *  - Device mode (FIREBASE_CONFIG null): accounts and parks live in this
+ *    browser's localStorage only. No verification, no server.
+ *  - Cloud mode (FIREBASE_CONFIG set in config.js): accounts live in
+ *    Firebase Auth (email/password under the hood, still no verification)
+ *    and parks sync live across devices via Firestore. localStorage is
+ *    kept as an offline cache.
+ */
 
 (function () {
   "use strict";
 
   var USERS_KEY = "wmc_users";
   var SESSION_KEY = "wmc_session";
+  var SYNTH_DOMAIN = "users.wheresmycar.app"; // synthetic auth email domain for username-only accounts
 
   var $ = function (sel) { return document.querySelector(sel); };
 
@@ -21,7 +30,54 @@
   var youMarker = null;
   var watchId = null;
 
-  /* ---------------- storage ---------------- */
+  /* In-memory parking data for the logged-in user. */
+  var state = { current: null, history: [] };
+  var unsubCloudData = null;
+
+  /* ---------------- cloud setup ---------------- */
+
+  var CLOUD = !!(window.FIREBASE_CONFIG && window.firebase);
+  var auth = null, db = null;
+
+  if (CLOUD) {
+    firebase.initializeApp(window.FIREBASE_CONFIG);
+    auth = firebase.auth();
+    db = firebase.firestore();
+    if (window.WMC_EMULATOR) {
+      auth.useEmulator("http://127.0.0.1:9099", { disableWarnings: true });
+      db.useEmulator("127.0.0.1", 8080);
+    } else {
+      db.enablePersistence({ synchronizeTabs: true }).catch(function () { /* unsupported browser — online-only */ });
+    }
+  }
+
+  function cloudErrorMessage(err) {
+    var code = (err && err.code) || "";
+    if (code.indexOf("email-already-in-use") >= 0) return "That email is already registered.";
+    if (code.indexOf("weak-password") >= 0) return "Password too weak — use at least 6 characters.";
+    if (code.indexOf("wrong-password") >= 0 || code.indexOf("invalid-credential") >= 0 || code.indexOf("user-not-found") >= 0) return "Wrong password.";
+    if (code.indexOf("too-many-requests") >= 0) return "Too many attempts — wait a minute and try again.";
+    if (code.indexOf("network-request-failed") >= 0) return "No connection — check your internet and try again.";
+    return (err && err.message) || "Something went wrong — try again.";
+  }
+
+  /* ---------------- session ---------------- */
+
+  function session() {
+    try {
+      var raw = localStorage.getItem(SESSION_KEY);
+      if (!raw) return null;
+      if (raw[0] === "{") return JSON.parse(raw);
+      return { username: raw, uid: null }; // pre-cloud sessions stored a bare username
+    } catch (e) { return null; }
+  }
+  function setSession(username, uid) {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ username: username, uid: uid || null }));
+  }
+  function clearSession() { localStorage.removeItem(SESSION_KEY); }
+  function currentUser() { var s = session(); return s && s.username; }
+
+  /* ---------------- local storage ---------------- */
 
   function loadUsers() {
     try { return JSON.parse(localStorage.getItem(USERS_KEY)) || {}; }
@@ -29,23 +85,53 @@
   }
   function saveUsers(users) { localStorage.setItem(USERS_KEY, JSON.stringify(users)); }
 
-  function currentUser() { return localStorage.getItem(SESSION_KEY); }
-
   function dataKey(username) { return "wmc_data_" + username.toLowerCase(); }
 
-  function loadData(username) {
+  function loadLocalData(username) {
     try {
       var d = JSON.parse(localStorage.getItem(dataKey(username)));
       if (d && typeof d === "object") return { current: d.current || null, history: d.history || [] };
     } catch (e) { /* fall through */ }
     return { current: null, history: [] };
   }
-  function saveData(username, data) {
-    localStorage.setItem(dataKey(username), JSON.stringify(data));
+  function mirrorLocal() {
+    var u = currentUser();
+    if (u) localStorage.setItem(dataKey(u), JSON.stringify(state));
   }
 
-  /* Password hashing: SHA-256 where available (https / localhost),
-   * otherwise a simple fallback hash. Local-only convenience, not real security. */
+  /* Persist the in-memory state: localStorage always, Firestore in cloud mode.
+   * Firestore writes are queued offline and sync when back online. */
+  function saveState() {
+    mirrorLocal();
+    var s = session();
+    if (CLOUD && s && s.uid) {
+      db.doc("users/" + s.uid + "/data/main").set(sanitize(state)).catch(function () { /* queued by persistence or lost offline — local copy remains */ });
+    }
+  }
+
+  /* Firestore rejects undefined values; make sure every field is concrete. */
+  function sanitize(d) {
+    var spot = function (x) {
+      return x ? { lat: x.lat, lng: x.lng, accuracy: x.accuracy || null, ts: x.ts, address: x.address || null } : null;
+    };
+    return { current: spot(d.current), history: (d.history || []).map(spot) };
+  }
+
+  function subscribeCloudData(uid) {
+    if (unsubCloudData) unsubCloudData();
+    unsubCloudData = db.doc("users/" + uid + "/data/main").onSnapshot(function (snap) {
+      if (snap.metadata.hasPendingWrites) return; // our own write echoing back
+      var d = snap.data();
+      if (!d) return;
+      state = { current: d.current || null, history: d.history || [] };
+      mirrorLocal();
+      if (!screens.home.classList.contains("hidden")) renderHome();
+      if (!screens.history.classList.contains("hidden")) renderHistory();
+    }, function () { /* permissions/offline hiccup — keep local state */ });
+  }
+
+  /* ---------------- password hashing (device mode only) ---------------- */
+
   function hashPassword(password) {
     if (window.crypto && crypto.subtle && window.TextEncoder) {
       return crypto.subtle.digest("SHA-256", new TextEncoder().encode(password)).then(function (buf) {
@@ -68,7 +154,7 @@
     if (name !== "map") stopWatching();
   }
 
-  /* ---------------- auth ---------------- */
+  /* ---------------- auth UI ---------------- */
 
   function normalizePhone(p) { return (p || "").replace(/[^\d+]/g, ""); }
 
@@ -84,6 +170,14 @@
   $("#tab-signup").addEventListener("click", function () { setTab("signup"); });
   $("#tab-login").addEventListener("click", function () { setTab("login"); });
 
+  function setBusy(form, busy) {
+    var btn = form.querySelector("button[type=submit]");
+    btn.disabled = busy;
+    btn.style.opacity = busy ? "0.6" : "";
+  }
+
+  /* ---------------- signup ---------------- */
+
   $("#form-signup").addEventListener("submit", function (ev) {
     ev.preventDefault();
     var errEl = $("#signup-error");
@@ -94,11 +188,17 @@
     var email = f.email.value.trim();
     var phone = f.phone.value.trim();
     var password = f.password.value;
+    var minLen = CLOUD ? 6 : 4; // Firebase Auth requires 6+
 
     if (!username) { errEl.textContent = "Pick a username."; return; }
-    if (!/^[\w.@+-]{2,32}$/.test(username)) { errEl.textContent = "Username: 2–32 letters, numbers or . _ @ + -"; return; }
-    if (password.length < 4) { errEl.textContent = "Password needs at least 4 characters."; return; }
+    if (!/^[\w.+-]{2,32}$/.test(username)) { errEl.textContent = "Username: 2–32 letters, numbers or . _ + -"; return; }
+    if (password.length < minLen) { errEl.textContent = "Password needs at least " + minLen + " characters."; return; }
 
+    if (CLOUD) cloudSignup(f, username, email, phone, password, errEl);
+    else localSignup(f, username, email, phone, password, errEl);
+  });
+
+  function localSignup(f, username, email, phone, password, errEl) {
     var users = loadUsers();
     var key = username.toLowerCase();
     if (users[key]) { errEl.textContent = "That username is taken on this device."; return; }
@@ -111,19 +211,59 @@
     if (taken) { errEl.textContent = "That email or phone is already registered on this device."; return; }
 
     hashPassword(password).then(function (hash) {
-      users[key] = {
-        username: username,
-        email: email || null,
-        phone: phone || null,
-        passwordHash: hash,
-        createdAt: Date.now()
-      };
+      users[key] = { username: username, email: email || null, phone: phone || null, passwordHash: hash, createdAt: Date.now() };
       saveUsers(users);
-      localStorage.setItem(SESSION_KEY, username);
+      setSession(username, null);
+      state = loadLocalData(username);
       f.reset();
       enterHome();
     });
-  });
+  }
+
+  function cloudSignup(f, username, email, phone, password, errEl) {
+    setBusy(f, true);
+    var key = username.toLowerCase();
+    var phoneNorm = phone ? normalizePhone(phone) : null;
+    var authEmail = email || (key + "@" + SYNTH_DOMAIN);
+
+    db.collection("profiles").doc(key).get().then(function (doc) {
+      if (doc.exists) throw { code: "wmc/username-taken" };
+      if (!phoneNorm) return null;
+      return db.collection("profiles").where("phoneNorm", "==", phoneNorm).limit(1).get().then(function (q) {
+        if (!q.empty) throw { code: "wmc/phone-taken" };
+      });
+    }).then(function () {
+      return auth.createUserWithEmailAndPassword(authEmail, password);
+    }).then(function (cred) {
+      var uid = cred.user.uid;
+      var profile = {
+        username: username, uid: uid, authEmail: authEmail,
+        email: email || null, emailLower: email ? email.toLowerCase() : null,
+        phone: phone || null, phoneNorm: phoneNorm,
+        createdAt: Date.now()
+      };
+      var seed = loadLocalData(username); // adopt any parks saved on this device before cloud mode
+      return cred.user.updateProfile({ displayName: username }).then(function () {
+        return db.collection("profiles").doc(key).set(profile);
+      }).then(function () {
+        return db.doc("users/" + uid + "/data/main").set(sanitize(seed));
+      }).then(function () {
+        state = seed;
+        setSession(username, uid);
+        subscribeCloudData(uid);
+        f.reset();
+        setBusy(f, false);
+        enterHome();
+      });
+    }).catch(function (err) {
+      setBusy(f, false);
+      if (err && err.code === "wmc/username-taken") errEl.textContent = "That username is taken.";
+      else if (err && err.code === "wmc/phone-taken") errEl.textContent = "That phone number is already registered.";
+      else errEl.textContent = cloudErrorMessage(err);
+    });
+  }
+
+  /* ---------------- login ---------------- */
 
   $("#form-login").addEventListener("submit", function (ev) {
     ev.preventDefault();
@@ -135,6 +275,11 @@
     var password = f.password.value;
     if (!id || !password) { errEl.textContent = "Fill in both fields."; return; }
 
+    if (CLOUD) cloudLogin(f, id, password, errEl);
+    else localLogin(f, id, password, errEl);
+  });
+
+  function localLogin(f, id, password, errEl) {
     var users = loadUsers();
     var match = null;
     Object.keys(users).forEach(function (k) {
@@ -149,14 +294,62 @@
 
     hashPassword(password).then(function (hash) {
       if (hash !== match.passwordHash) { errEl.textContent = "Wrong password."; return; }
-      localStorage.setItem(SESSION_KEY, match.username);
+      setSession(match.username, null);
+      state = loadLocalData(match.username);
       f.reset();
       enterHome();
     });
-  });
+  }
+
+  function resolveProfile(id) {
+    var lower = id.toLowerCase();
+    if (id.indexOf("@") >= 0) {
+      return db.collection("profiles").where("emailLower", "==", lower).limit(1).get().then(function (q) {
+        return q.empty ? null : q.docs[0].data();
+      });
+    }
+    return db.collection("profiles").doc(lower).get().then(function (doc) {
+      if (doc.exists) return doc.data();
+      var pn = normalizePhone(id);
+      if (pn.length < 6) return null;
+      return db.collection("profiles").where("phoneNorm", "==", pn).limit(1).get().then(function (q) {
+        return q.empty ? null : q.docs[0].data();
+      });
+    });
+  }
+
+  function cloudLogin(f, id, password, errEl) {
+    setBusy(f, true);
+    resolveProfile(id).then(function (profile) {
+      if (!profile) throw { code: "wmc/no-account" };
+      return auth.signInWithEmailAndPassword(profile.authEmail, password).then(function (cred) {
+        return { profile: profile, uid: cred.user.uid };
+      });
+    }).then(function (r) {
+      return db.doc("users/" + r.uid + "/data/main").get().then(function (doc) {
+        var d = doc.exists ? doc.data() : null;
+        state = d ? { current: d.current || null, history: d.history || [] } : { current: null, history: [] };
+        setSession(r.profile.username, r.uid);
+        mirrorLocal();
+        subscribeCloudData(r.uid);
+        f.reset();
+        setBusy(f, false);
+        enterHome();
+      });
+    }).catch(function (err) {
+      setBusy(f, false);
+      if (err && err.code === "wmc/no-account") errEl.textContent = "No account found for that username, email or phone.";
+      else errEl.textContent = cloudErrorMessage(err);
+    });
+  }
+
+  /* ---------------- logout ---------------- */
 
   $("#btn-logout").addEventListener("click", function () {
-    localStorage.removeItem(SESSION_KEY);
+    if (unsubCloudData) { unsubCloudData(); unsubCloudData = null; }
+    clearSession();
+    state = { current: null, history: [] };
+    if (CLOUD) auth.signOut().catch(function () {});
     setTab("login");
     show("auth");
   });
@@ -198,24 +391,21 @@
   /* ---------------- home ---------------- */
 
   function enterHome() {
-    var user = currentUser();
-    $("#home-greeting").textContent = "Hi, " + user + " 👋";
+    $("#home-greeting").textContent = "Hi, " + currentUser() + " 👋";
     renderHome();
     show("home");
   }
 
   function renderHome() {
-    var data = loadData(currentUser());
-
     var cur = $("#current-park-body");
-    if (data.current) cur.innerHTML = spotHtml(data.current);
+    if (state.current) cur.innerHTML = spotHtml(state.current);
     else cur.innerHTML = '<p class="empty">No car parked yet — press PARK when you leave your car.</p>';
 
     var last = $("#last-park-body");
-    if (data.history.length) last.innerHTML = spotHtml(data.history[0]);
+    if (state.history.length) last.innerHTML = spotHtml(state.history[0]);
     else last.innerHTML = '<p class="empty">Your previous spot will show up here.</p>';
 
-    $("#btn-show-car").setAttribute("aria-disabled", data.current ? "false" : "true");
+    $("#btn-show-car").setAttribute("aria-disabled", state.current ? "false" : "true");
   }
 
   /* ---------------- parking ---------------- */
@@ -246,10 +436,7 @@
     status.textContent = "Getting your location…";
 
     getPosition().then(function (pos) {
-      var user = currentUser();
-      var data = loadData(user);
-
-      if (data.current) data.history.unshift(data.current);
+      if (state.current) state.history.unshift(state.current);
 
       var spot = {
         lat: pos.coords.latitude,
@@ -258,14 +445,14 @@
         ts: Date.now(),
         address: null
       };
-      data.current = spot;
-      saveData(user, data);
+      state.current = spot;
+      saveState();
 
       btn.classList.remove("busy");
       status.className = "park-status ok";
       status.textContent = "✅ Parked! Spot saved at " + fmtCoords(spot);
       renderHome();
-      lookupAddress(user, spot);
+      lookupAddress(spot);
     }).catch(function (err) {
       btn.classList.remove("busy");
       status.className = "park-status err";
@@ -274,7 +461,7 @@
   });
 
   /* Reverse-geocode via OpenStreetMap Nominatim; purely cosmetic, fails silently. */
-  function lookupAddress(user, spot) {
+  function lookupAddress(spot) {
     if (!navigator.onLine) return;
     var url = "https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=17" +
               "&lat=" + spot.lat + "&lon=" + spot.lng;
@@ -282,11 +469,11 @@
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (j) {
         if (!j || !j.display_name) return;
-        var data = loadData(user);
-        [data.current].concat(data.history).forEach(function (s) {
-          if (s && s.ts === spot.ts) s.address = j.display_name.split(",").slice(0, 3).join(",");
+        var addr = j.display_name.split(",").slice(0, 3).join(",");
+        [state.current].concat(state.history).forEach(function (s) {
+          if (s && s.ts === spot.ts) s.address = addr;
         });
-        saveData(user, data);
+        saveState();
         if (!screens.home.classList.contains("hidden")) renderHome();
       })
       .catch(function () { /* offline or blocked — coords are enough */ });
@@ -295,14 +482,13 @@
   /* ---------------- map ---------------- */
 
   $("#btn-show-car").addEventListener("click", function () {
-    var data = loadData(currentUser());
-    if (!data.current) {
+    if (!state.current) {
       var status = $("#park-status");
       status.className = "park-status err";
       status.textContent = "No saved spot yet — press PARK first.";
       return;
     }
-    openMap(data.current);
+    openMap(state.current);
   });
 
   function openMap(spot) {
@@ -378,12 +564,11 @@
   });
 
   function renderHistory() {
-    var data = loadData(currentUser());
     var list = $("#history-list");
     list.innerHTML = "";
-    $("#history-empty").classList.toggle("hidden", data.history.length > 0);
+    $("#history-empty").classList.toggle("hidden", state.history.length > 0);
 
-    data.history.forEach(function (spot, i) {
+    state.history.forEach(function (spot, i) {
       var li = document.createElement("li");
       li.className = "history-item";
       li.innerHTML =
@@ -398,20 +583,16 @@
   $("#history-list").addEventListener("click", function (ev) {
     var del = ev.target.closest(".del");
     if (!del) return;
-    var user = currentUser();
-    var data = loadData(user);
-    data.history.splice(Number(del.dataset.i), 1);
-    saveData(user, data);
+    state.history.splice(Number(del.dataset.i), 1);
+    saveState();
     renderHistory();
     renderHome();
   });
 
   $("#btn-clear-history").addEventListener("click", function () {
     if (!confirm("Delete all parking history? Your current park is kept.")) return;
-    var user = currentUser();
-    var data = loadData(user);
-    data.history = [];
-    saveData(user, data);
+    state.history = [];
+    saveState();
     renderHistory();
     renderHome();
   });
@@ -422,6 +603,28 @@
     btn.addEventListener("click", function () { enterHome(); });
   });
 
-  if (currentUser()) enterHome();
-  else show("auth");
+  function boot() {
+    var s = session();
+    if (!CLOUD) {
+      if (s) { state = loadLocalData(s.username); enterHome(); }
+      else show("auth");
+      return;
+    }
+    // Cloud: wait for Firebase to restore the auth session (first event only).
+    var first = true;
+    auth.onAuthStateChanged(function (user) {
+      if (!first) return;
+      first = false;
+      if (user && s && s.uid === user.uid) {
+        state = loadLocalData(s.username); // instant paint from cache; snapshot refreshes it
+        subscribeCloudData(user.uid);
+        enterHome();
+      } else {
+        clearSession();
+        show("auth");
+      }
+    });
+  }
+
+  boot();
 })();
