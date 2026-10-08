@@ -177,7 +177,10 @@ button { font-family: var(--font-body); }
 
 /* ---------- buttons ---------- */
 .btn {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   width: 100%;
   border: none;
   border-radius: 12px;
@@ -191,6 +194,12 @@ button { font-family: var(--font-body); }
   text-align: center;
   text-decoration: none;
   transition: transform 0.12s ease, opacity 0.12s ease, background 0.15s ease;
+}
+
+.btn .ic {
+  width: 18px;
+  height: 18px;
+  flex: none;
 }
 
 /* Primary action: white on graphite */
