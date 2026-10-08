@@ -1,18 +1,26 @@
-/* Where's My Car? — mobile-first styling */
+/* Where's My Car? — mobile-first styling
+ * Night-drive theme: asphalt ground, signal-green PARK, amber headlights. */
 
 :root {
-  --bg: #0f1420;
-  --bg-raised: #1a2233;
-  --bg-input: #121a2a;
-  --border: #2a3550;
-  --text: #eef2fa;
-  --text-dim: #93a0b8;
-  --accent: #3b82f6;
-  --accent-strong: #2563eb;
-  --park: #10b981;
-  --park-deep: #059669;
-  --danger: #ef4444;
-  --radius: 16px;
+  --bg: #0b0f17;
+  --bg-sky: #101828;
+  --bg-raised: #151c2c;
+  --bg-input: #0f1624;
+  --border: #263249;
+  --border-bright: #33425f;
+  --text: #f1f5fc;
+  --text-dim: #8d9ab2;
+  --accent: #4f8df9;
+  --accent-strong: #2f6fe4;
+  --park: #17c788;
+  --park-deep: #0a9663;
+  --park-dark: #076b48;
+  --amber: #ffb021;
+  --amber-deep: #e08900;
+  --danger: #ff5d5d;
+  --radius: 18px;
+  --font-display: "Archivo", "Segoe UI", Arial, sans-serif;
+  --font-body: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -24,9 +32,11 @@ html, body {
 }
 
 body {
-  background: var(--bg);
+  background:
+    radial-gradient(120% 70% at 50% -10%, var(--bg-sky) 0%, var(--bg) 60%),
+    var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -42,6 +52,14 @@ body {
 
 .hidden { display: none !important; }
 
+button { font-family: var(--font-body); }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
 /* ---------- top bar ---------- */
 .topbar {
   display: flex;
@@ -51,17 +69,19 @@ body {
   padding-top: env(safe-area-inset-top);
 }
 
-.greeting { font-weight: 600; }
-.screen-title { font-weight: 700; }
+.greeting { font-weight: 700; letter-spacing: 0.2px; }
+.screen-title { font-weight: 800; font-family: var(--font-display); letter-spacing: 0.4px; }
 
 .btn-ghost {
   background: none;
   border: none;
   color: var(--text-dim);
   font-size: 15px;
+  font-weight: 600;
   padding: 8px;
   cursor: pointer;
 }
+.btn-ghost:hover { color: var(--text); }
 .btn-ghost.danger { color: var(--danger); }
 
 /* ---------- auth ---------- */
@@ -74,14 +94,26 @@ body {
 }
 
 .logo { text-align: center; }
-.logo-icon { width: 72px; height: 72px; }
-.logo h1 { margin: 8px 0 4px; font-size: 28px; }
-.tagline { margin: 0; color: var(--text-dim); }
+.logo-icon {
+  width: 84px;
+  height: 84px;
+  filter: drop-shadow(0 10px 24px rgba(23, 199, 136, 0.35));
+}
+.logo h1 {
+  margin: 10px 0 4px;
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: 0.3px;
+  text-wrap: balance;
+}
+.tagline { margin: 0; color: var(--text-dim); font-weight: 500; }
 
 .auth-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
   background: var(--bg-raised);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 4px;
   gap: 4px;
@@ -91,30 +123,38 @@ body {
   border: none;
   background: none;
   color: var(--text-dim);
-  padding: 10px;
-  border-radius: 12px;
+  padding: 11px;
+  border-radius: 13px;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
+  transition: color 0.15s ease;
 }
 .auth-tab.active {
-  background: var(--accent-strong);
+  background: linear-gradient(180deg, var(--accent), var(--accent-strong));
   color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 4px 12px rgba(47, 111, 228, 0.35);
 }
 
 .auth-form {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 16px;
 }
 
 .auth-form label {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text-dim);
-  font-weight: 600;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
 }
 
 .auth-form input {
@@ -122,26 +162,28 @@ body {
   border: 1px solid var(--border);
   border-radius: 12px;
   color: var(--text);
+  font-family: var(--font-body);
   font-size: 16px;
-  padding: 12px 14px;
+  padding: 13px 14px;
   outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.auth-form input:focus { border-color: var(--accent); }
+.auth-form input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(79, 141, 249, 0.18);
+}
 
 .req { color: var(--danger); }
-.opt { font-weight: 400; }
+.opt { font-weight: 400; text-transform: none; letter-spacing: 0; }
 
-.hint {
-  margin: 0;
-  font-size: 13px;
-  color: var(--text-dim);
-}
+.hint { margin: 0; font-size: 13px; color: var(--text-dim); }
 
 .form-error {
   margin: 0;
   min-height: 1.2em;
   color: var(--danger);
   font-size: 14px;
+  font-weight: 600;
   text-align: center;
 }
 
@@ -151,27 +193,63 @@ body {
   width: 100%;
   border: none;
   border-radius: var(--radius);
-  padding: 15px 18px;
+  padding: 16px 18px;
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 800;
+  font-family: var(--font-display);
+  letter-spacing: 0.4px;
   cursor: pointer;
   text-align: center;
   text-decoration: none;
   color: #fff;
+  position: relative;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
 }
 
-.btn-primary { background: linear-gradient(180deg, var(--accent), var(--accent-strong)); }
+.btn-primary {
+  background: linear-gradient(180deg, var(--accent) 0%, var(--accent-strong) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3),
+              inset 0 -3px 0 rgba(0, 0, 0, 0.25),
+              0 8px 20px -6px rgba(47, 111, 228, 0.55);
+}
+
 .btn-secondary {
-  background: var(--bg-raised);
-  border: 1px solid var(--border);
+  background: linear-gradient(180deg, #1b2438, var(--bg-raised));
+  border: 1px solid var(--border-bright);
   color: var(--text);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 6px 16px -8px rgba(0, 0, 0, 0.6);
 }
+
+/* Headlight-amber CTA with a sweeping beam */
 .btn-show {
-  background: linear-gradient(180deg, #f59e0b, #d97706);
+  background: linear-gradient(180deg, var(--amber) 0%, var(--amber-deep) 100%);
+  color: #2a1a00;
   font-size: 17px;
-  letter-spacing: 0.3px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5),
+              inset 0 -4px 0 rgba(0, 0, 0, 0.18),
+              0 10px 26px -8px rgba(255, 176, 33, 0.55);
+  overflow: hidden;
 }
-.btn:active { transform: scale(0.98); }
+.btn-show::after {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0;
+  left: -70%;
+  width: 45%;
+  background: linear-gradient(105deg, transparent 0%, rgba(255, 255, 255, 0.55) 50%, transparent 100%);
+  transform: skewX(-20deg);
+  animation: headlight 4.5s ease-in-out infinite;
+}
+@keyframes headlight {
+  0%, 62%  { left: -70%; }
+  82%, 100% { left: 130%; }
+}
+
+.btn:hover { filter: brightness(1.05); }
+.btn:active {
+  transform: translateY(3px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 3px 8px -4px rgba(0, 0, 0, 0.5);
+}
 .btn[aria-disabled="true"] { opacity: 0.45; pointer-events: none; }
 
 /* ---------- home ---------- */
@@ -179,48 +257,127 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  padding: 8px 0;
+  gap: 18px;
+  padding: 10px 0 4px;
 }
 
+/* The PARK button: a pressable 3D puck */
 .park-circle {
-  width: 200px;
-  height: 200px;
+  --press: 0px;
+  width: 210px;
+  height: 210px;
   border-radius: 50%;
   border: none;
   cursor: pointer;
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 3px;
   color: #fff;
-  background: radial-gradient(circle at 30% 25%, var(--park), var(--park-deep) 75%);
-  box-shadow: 0 0 0 10px rgba(16, 185, 129, 0.12),
-              0 0 0 22px rgba(16, 185, 129, 0.05),
-              0 12px 30px rgba(0, 0, 0, 0.45);
-  transition: transform 0.1s ease;
+  background:
+    radial-gradient(130% 110% at 32% 22%, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0) 42%),
+    radial-gradient(120% 120% at 50% 115%, var(--park-dark) 0%, rgba(7, 107, 72, 0) 55%),
+    linear-gradient(180deg, var(--park) 0%, var(--park-deep) 100%);
+  box-shadow:
+    inset 0 2px 2px rgba(255, 255, 255, 0.35),
+    inset 0 -12px 22px rgba(0, 0, 0, 0.38),
+    0 14px 0 -4px var(--park-dark),
+    0 24px 44px -12px rgba(23, 199, 136, 0.45),
+    0 18px 50px rgba(0, 0, 0, 0.55);
+  transform: translateY(var(--press));
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
-.park-circle:active { transform: scale(0.95); }
-.park-circle.busy { animation: pulse 1s ease-in-out infinite; }
-
+/* Kerb ring around the puck */
+.park-circle::before {
+  content: "";
+  position: absolute;
+  inset: -14px;
+  border-radius: 50%;
+  border: 2px dashed rgba(23, 199, 136, 0.35);
+  animation: kerb 24s linear infinite;
+  pointer-events: none;
+}
+@keyframes kerb { to { transform: rotate(360deg); } }
+/* Glass glare on top */
+.park-circle::after {
+  content: "";
+  position: absolute;
+  top: 10%;
+  left: 16%;
+  width: 68%;
+  height: 34%;
+  border-radius: 50%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.32), rgba(255, 255, 255, 0));
+  filter: blur(1px);
+  pointer-events: none;
+}
+.park-circle:active {
+  --press: 9px;
+  box-shadow:
+    inset 0 2px 2px rgba(255, 255, 255, 0.25),
+    inset 0 -8px 16px rgba(0, 0, 0, 0.42),
+    0 5px 0 -4px var(--park-dark),
+    0 10px 22px -10px rgba(23, 199, 136, 0.4),
+    0 8px 24px rgba(0, 0, 0, 0.5);
+}
+.park-circle.busy { animation: pulse 1.1s ease-in-out infinite; }
 @keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 10px rgba(16,185,129,0.12), 0 0 0 22px rgba(16,185,129,0.05); }
-  50%      { box-shadow: 0 0 0 16px rgba(16,185,129,0.22), 0 0 0 32px rgba(16,185,129,0.10); }
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.12); }
 }
 
-.park-icon { font-size: 40px; }
-.park-word { font-size: 34px; font-weight: 800; letter-spacing: 2px; }
-.park-sub { font-size: 13px; opacity: 0.85; }
+.park-badge {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.3), 0 2px 6px rgba(0, 0, 0, 0.25);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+.park-word {
+  font-family: var(--font-display);
+  font-size: 38px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+}
+.park-sub {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  opacity: 0.9;
+}
 
 .park-status {
   margin: 0;
-  min-height: 1.3em;
+  min-height: 1.4em;
   color: var(--text-dim);
   font-size: 14px;
+  font-weight: 600;
   text-align: center;
 }
 .park-status.ok { color: var(--park); }
+.park-status.ok::before {
+  content: "🚗";
+  display: inline-block;
+  margin-right: 6px;
+  animation: drive-in 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes drive-in {
+  0%   { transform: translateX(-60px); opacity: 0; }
+  70%  { transform: translateX(6px); }
+  100% { transform: translateX(0); opacity: 1; }
+}
 .park-status.err { color: var(--danger); }
 
 /* ---------- cards ---------- */
@@ -231,26 +388,63 @@ body {
 }
 
 .card {
-  background: var(--bg-raised);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0)) , var(--bg-raised);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 14px 16px;
+  box-shadow: 0 8px 20px -14px rgba(0, 0, 0, 0.8);
 }
 .card-current { border-left: 4px solid var(--park); }
-.card-last { border-left: 4px solid #f59e0b; }
+.card-last { border-left: 4px solid var(--amber); }
 
 .card h2 {
   margin: 0 0 8px;
-  font-size: 13px;
+  font-size: 12px;
+  font-family: var(--font-display);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 1.4px;
   color: var(--text-dim);
 }
 
 .card-body p { margin: 0 0 4px; font-size: 15px; }
-.spot-address { font-weight: 600; }
-.spot-meta { color: var(--text-dim); font-size: 13px !important; }
+.spot-address { font-weight: 700; }
+.spot-meta { color: var(--text-dim); font-size: 13px !important; font-weight: 500; }
 .empty { color: var(--text-dim); font-size: 14px; }
+
+/* ---------- animated road ---------- */
+.road {
+  position: relative;
+  height: 46px;
+  margin: auto -16px calc(-24px - env(safe-area-inset-bottom));
+  margin-top: auto;
+  background: linear-gradient(180deg, #121826 0%, #0d1320 100%);
+  border-top: 1px solid var(--border);
+  overflow: hidden;
+}
+.road-lane {
+  position: absolute;
+  top: 50%;
+  left: 0; right: 0;
+  height: 3px;
+  margin-top: -1.5px;
+  background: repeating-linear-gradient(90deg,
+    rgba(255, 213, 74, 0.75) 0 26px,
+    transparent 26px 54px);
+  animation: lane 1.6s linear infinite;
+}
+@keyframes lane { to { transform: translateX(-54px); } }
+.road-car {
+  position: absolute;
+  bottom: 7px;
+  left: -12%;
+  font-size: 20px;
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.5));
+  animation: cruise 9s linear infinite;
+}
+@keyframes cruise {
+  from { left: -12%; }
+  to   { left: 112%; }
+}
 
 /* ---------- map ---------- */
 #screen-map { padding: 0; max-width: none; }
@@ -277,6 +471,7 @@ body {
   text-align: center;
   color: var(--text-dim);
   font-size: 14px;
+  font-weight: 600;
 }
 
 /* ---------- history ---------- */
@@ -297,6 +492,7 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
+  box-shadow: 0 6px 16px -12px rgba(0, 0, 0, 0.8);
 }
 
 .history-item .info { flex: 1; min-width: 0; }
@@ -311,7 +507,7 @@ body {
   color: var(--accent);
   text-decoration: none;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .history-item .del {
@@ -321,6 +517,19 @@ body {
   font-size: 18px;
   cursor: pointer;
   padding: 6px;
+  transition: color 0.15s ease, transform 0.15s ease;
 }
+.history-item .del:hover { color: var(--danger); transform: scale(1.1); }
 
 .history-empty { text-align: center; margin-top: 24px; }
+
+/* ---------- motion preferences ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .btn-show::after,
+  .park-circle::before,
+  .park-circle.busy,
+  .park-status.ok::before,
+  .road-lane,
+  .road-car { animation: none; }
+  .btn, .park-circle { transition: none; }
+}

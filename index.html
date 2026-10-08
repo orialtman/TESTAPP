@@ -7,6 +7,9 @@
   <title>Where's My Car?</title>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Manrope:wght@400;500;600;700;800&display=swap" />
   <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
   <link rel="stylesheet" href="style.css" />
 </head>
@@ -37,9 +40,9 @@
           <input name="phone" type="tel" autocomplete="tel" placeholder="+972 50 000 0000" />
         </label>
         <label>Password <span class="req">*</span>
-          <input name="password" type="password" autocomplete="new-password" placeholder="min 4 characters" required minlength="4" />
+          <input name="password" type="password" autocomplete="new-password" placeholder="min 6 characters" required minlength="4" />
         </label>
-        <p class="hint">No verification needed — your account works instantly. Everything is stored only on this device.</p>
+        <p class="hint">No verification needed — your account works instantly and your parking spots sync across all your devices.</p>
         <button type="submit" class="btn btn-primary">Create account</button>
         <p id="signup-error" class="form-error" role="alert"></p>
       </form>
@@ -66,7 +69,7 @@
 
     <div class="home-main">
       <button id="btn-park" class="park-circle" type="button" aria-label="Park here — save my car's current location">
-        <span class="park-icon">🅿️</span>
+        <span class="park-badge" aria-hidden="true">P</span>
         <span class="park-word">PARK</span>
         <span class="park-sub">save my spot</span>
       </button>
@@ -94,6 +97,11 @@
     </div>
 
     <button id="btn-history" class="btn btn-secondary" type="button">📜 Parking history</button>
+
+    <div class="road" aria-hidden="true">
+      <div class="road-lane"></div>
+      <span class="road-car">🚗</span>
+    </div>
   </section>
 
   <!-- ============ MAP SCREEN ============ -->

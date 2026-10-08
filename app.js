@@ -450,7 +450,7 @@
 
       btn.classList.remove("busy");
       status.className = "park-status ok";
-      status.textContent = "✅ Parked! Spot saved at " + fmtCoords(spot);
+      status.textContent = "Parked! Spot saved at " + fmtCoords(spot);
       renderHome();
       lookupAddress(spot);
     }).catch(function (err) {
