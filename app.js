@@ -406,6 +406,7 @@
     else last.innerHTML = '<p class="empty">Your previous spot will show up here.</p>';
 
     $("#btn-show-car").setAttribute("aria-disabled", state.current ? "false" : "true");
+    $("#btn-park").classList.toggle("parked", !!state.current);
   }
 
   /* ---------------- parking ---------------- */
@@ -426,6 +427,31 @@
     if (err && err.code === 2) return "Couldn't determine your location. Are you indoors or offline?";
     if (err && err.code === 3) return "Location timed out — try again with a clearer view of the sky.";
     return (err && err.message) || "Couldn't get your location.";
+  }
+
+  /* Confetti burst from the PARK button on a successful park. */
+  function fireConfetti(anchor) {
+    if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!anchor.getBoundingClientRect || !document.body.animate && !Element.prototype.animate) return;
+    var r = anchor.getBoundingClientRect();
+    var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    var colors = ["#ff4d6d", "#ffd54a", "#2af0b8", "#4f8df9", "#ff9f1c", "#ffffff"];
+    for (var i = 0; i < 46; i++) {
+      var el = document.createElement("div");
+      var size = 6 + Math.random() * 7;
+      el.style.cssText = "position:fixed;left:" + cx + "px;top:" + cy + "px;width:" + size +
+        "px;height:" + (size * 0.6) + "px;background:" + colors[i % colors.length] +
+        ";border-radius:2px;pointer-events:none;z-index:9999;";
+      document.body.appendChild(el);
+      var ang = Math.random() * Math.PI * 2;
+      var dist = 90 + Math.random() * 190;
+      var dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist - 70;
+      var anim = el.animate([
+        { transform: "translate(-50%,-50%) rotate(0deg)", opacity: 1 },
+        { transform: "translate(" + dx + "px," + (dy + 150) + "px) rotate(" + (360 + Math.random() * 400) + "deg)", opacity: 0 }
+      ], { duration: 950 + Math.random() * 750, easing: "cubic-bezier(0.17,0.67,0.3,1)" });
+      anim.onfinish = (function (e) { return function () { e.remove(); }; })(el);
+    }
   }
 
   $("#btn-park").addEventListener("click", function () {
@@ -452,6 +478,7 @@
       status.className = "park-status ok";
       status.textContent = "Parked! Spot saved at " + fmtCoords(spot);
       renderHome();
+      fireConfetti(btn);
       lookupAddress(spot);
     }).catch(function (err) {
       btn.classList.remove("busy");
