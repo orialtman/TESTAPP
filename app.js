@@ -476,7 +476,7 @@
 
       btn.classList.remove("busy");
       status.className = "park-status ok";
-      status.textContent = "Parked! Spot saved at " + fmtCoords(spot);
+      status.textContent = "Parked! Spot saved — finding your street\u2026";
       renderHome();
       fireConfetti(btn);
       lookupAddress(spot);
@@ -487,21 +487,37 @@
     });
   });
 
+  /* Turn a Nominatim result into "Street 12, City". */
+  function niceAddress(j) {
+    var ad = j.address || {};
+    var road = ad.road || ad.pedestrian || ad.footway || ad.residential || ad.square || ad.neighbourhood || "";
+    if (road && ad.house_number) road += " " + ad.house_number;
+    var city = ad.city || ad.town || ad.village || ad.municipality || "";
+    var parts = [road, city].filter(Boolean);
+    if (parts.length) return parts.join(", ");
+    return j.display_name ? j.display_name.split(",").slice(0, 2).join(",").trim() : null;
+  }
+
   /* Reverse-geocode via OpenStreetMap Nominatim; purely cosmetic, fails silently. */
   function lookupAddress(spot) {
     if (!navigator.onLine) return;
-    var url = "https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=17" +
+    var url = "https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1" +
               "&lat=" + spot.lat + "&lon=" + spot.lng;
     fetch(url, { headers: { "Accept": "application/json" } })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (j) {
-        if (!j || !j.display_name) return;
-        var addr = j.display_name.split(",").slice(0, 3).join(",");
+        if (!j) return;
+        var addr = niceAddress(j);
+        if (!addr) return;
         [state.current].concat(state.history).forEach(function (s) {
           if (s && s.ts === spot.ts) s.address = addr;
         });
         saveState();
         if (!screens.home.classList.contains("hidden")) renderHome();
+        var st = $("#park-status");
+        if (st.classList.contains("ok") && state.current && state.current.ts === spot.ts) {
+          st.textContent = "Parked on " + addr;
+        }
       })
       .catch(function () { /* offline or blocked — coords are enough */ });
   }
