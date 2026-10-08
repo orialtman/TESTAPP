@@ -407,6 +407,7 @@
 
     $("#btn-show-car").setAttribute("aria-disabled", state.current ? "false" : "true");
     $("#btn-park").classList.toggle("parked", !!state.current);
+    $("#btn-share").setAttribute("aria-disabled", state.current ? "false" : "true");
   }
 
   /* ---------------- parking ---------------- */
@@ -521,6 +522,47 @@
       })
       .catch(function () { /* offline or blocked — coords are enough */ });
   }
+
+  /* ---------------- share ---------------- */
+
+  function carShareLink(spot) {
+    return "https://www.google.com/maps/search/?api=1&query=" + spot.lat + "," + spot.lng;
+  }
+
+  function shareCar(feedback) {
+    var spot = state.current;
+    if (!spot) { feedback("No saved spot yet — press PARK first.", true); return; }
+    var where = spot.address || fmtCoords(spot);
+    var text = "\ud83d\ude97 My car is parked at " + where;
+    var url = carShareLink(spot);
+
+    if (navigator.share) {
+      navigator.share({ title: "Where's My Car?", text: text, url: url })
+        .then(function () { feedback("Shared! \ud83c\udf89", false); })
+        .catch(function () { /* user closed the share sheet — no message needed */ });
+      return;
+    }
+    var full = text + "\n" + url;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(full).then(function () {
+        feedback("Link copied — paste it to a friend! \ud83d\udccb", false);
+      }).catch(function () { feedback(url, false); });
+    } else {
+      feedback(url, false);
+    }
+  }
+
+  $("#btn-share").addEventListener("click", function () {
+    shareCar(function (msg, isErr) {
+      var status = $("#park-status");
+      status.className = "park-status " + (isErr ? "err" : "ok");
+      status.textContent = msg;
+    });
+  });
+
+  $("#btn-share-map").addEventListener("click", function () {
+    shareCar(function (msg) { $("#map-info").textContent = msg; });
+  });
 
   /* ---------------- map ---------------- */
 
