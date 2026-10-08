@@ -377,7 +377,7 @@
 
   function spotHtml(spot) {
     var addr = spot.address ? escapeHtml(spot.address) : fmtCoords(spot);
-    return '<p class="spot-address">📍 ' + addr + "</p>" +
+    return '<p class="spot-address">' + addr + "</p>" +
            '<p class="spot-meta">' + fmtWhen(spot.ts) +
            (spot.accuracy ? " · ±" + Math.round(spot.accuracy) + " m" : "") + "</p>";
   }
@@ -391,7 +391,7 @@
   /* ---------------- home ---------------- */
 
   function enterHome() {
-    $("#home-greeting").textContent = "Hi, " + currentUser() + " 👋";
+    $("#home-greeting").textContent = "Hi, " + currentUser();
     renderHome();
     show("home");
   }
@@ -436,8 +436,8 @@
     if (!anchor.getBoundingClientRect || !document.body.animate && !Element.prototype.animate) return;
     var r = anchor.getBoundingClientRect();
     var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-    var colors = ["#ff4d6d", "#ffd54a", "#2af0b8", "#4f8df9", "#ff9f1c", "#ffffff"];
-    for (var i = 0; i < 46; i++) {
+    var colors = ["#2EA56F", "#8FD6B2", "#F4F6F8", "#C9CED6"];
+    for (var i = 0; i < 30; i++) {
       var el = document.createElement("div");
       var size = 6 + Math.random() * 7;
       el.style.cssText = "position:fixed;left:" + cx + "px;top:" + cy + "px;width:" + size +
@@ -538,14 +538,14 @@
 
     if (navigator.share) {
       navigator.share({ title: "Where's My Car?", text: text, url: url })
-        .then(function () { feedback("Shared! \ud83c\udf89", false); })
+        .then(function () { feedback("Shared.", false); })
         .catch(function () { /* user closed the share sheet — no message needed */ });
       return;
     }
     var full = text + "\n" + url;
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(full).then(function () {
-        feedback("Link copied — paste it to a friend! \ud83d\udccb", false);
+        feedback("Link copied — send it to a friend.", false);
       }).catch(function () { feedback(url, false); });
     } else {
       feedback(url, false);
@@ -596,7 +596,7 @@
 
     if (carMarker) map.removeLayer(carMarker);
     carMarker = L.marker([spot.lat, spot.lng], {
-      icon: L.divIcon({ className: "", html: '<div style="font-size:30px;line-height:1">🚗</div>', iconSize: [30, 30], iconAnchor: [15, 15] })
+      icon: L.divIcon({ className: "", html: '<div class="pin pin-car">P</div>', iconSize: [26, 26], iconAnchor: [13, 13] })
     }).addTo(map).bindPopup("Your car is here");
     map.setView([spot.lat, spot.lng], 17);
     setTimeout(function () { map.invalidateSize(); }, 50);
@@ -613,7 +613,7 @@
       if (youMarker) youMarker.setLatLng(you);
       else {
         youMarker = L.marker(you, {
-          icon: L.divIcon({ className: "", html: '<div style="font-size:24px;line-height:1">🧍</div>', iconSize: [24, 24], iconAnchor: [12, 12] })
+          icon: L.divIcon({ className: "", html: '<div class="pin pin-you"></div>', iconSize: [18, 18], iconAnchor: [9, 9] })
         }).addTo(map).bindPopup("You are here");
       }
       var d = distanceMeters(you[0], you[1], spot.lat, spot.lng);
@@ -660,7 +660,7 @@
         '<div class="info">' + spotHtml(spot) +
         '<a class="mini" target="_blank" rel="noopener" href="' + gmapsLink(spot) + '">Open in Google Maps →</a>' +
         "</div>" +
-        '<button class="del" data-i="' + i + '" aria-label="Delete this entry" type="button">🗑</button>';
+        '<button class="del" data-i="' + i + '" aria-label="Delete this entry" type="button">&#10005;</button>';
       list.appendChild(li);
     });
   }
